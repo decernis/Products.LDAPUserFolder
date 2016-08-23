@@ -1477,7 +1477,11 @@ class LDAPUserFolder(BasicUserFolder):
         elif newgroup_name:
             attributes = {}
             attributes['cn'] = [newgroup_name]
-            attributes['objectClass'] = ['top', newgroup_type]
+            attributes['objectClass'] = [
+                'top',
+                newgroup_type,
+                'extensibleObject',
+            ]
 
             if self._binduid:
                 initial_member = self._binduid
@@ -1502,6 +1506,36 @@ class LDAPUserFolder(BasicUserFolder):
         if REQUEST:
             return self.manage_grouprecords(manage_tabs_message=msg)
 
+    security.declareProtected(manage_users, 'manage_update_group')
+    def manage_update_group(self, dn, attrs):
+        """Update group with attributes"""
+        attrs_provided = set(attrs.keys())
+        if not attrs_provided.issubset(VALID_GROUP_ATTRIBUTES):
+            raise ValueError(
+                "Unsupported attributes provided: {}".format(
+                    VALID_GROUP_ATTRIBUTES.intersection(attrs_provided)
+                )
+            )
+
+        # backwards compatibility: add extensibleObject class if missing
+        # so we have support for attributes like displayName
+        group_object_classes = self._delegate.search(
+            base=to_utf8(dn),
+            scope=self._delegate.BASE,
+            attrs=['objectClass'],
+        )['results'][0]['objectClass']
+        if 'extensibleObject' not in group_object_classes:
+            attrs = dict(attrs)
+            group_object_classes.append(
+                'extensibleObject'
+            )
+            attrs['objectClass'] = group_object_classes
+
+        return self._delegate.modify(
+            dn=dn,
+            mod_type=self._delegate.REPLACE,
+            attrs=attrs,
+        )
 
     security.declareProtected(manage_users, 'manage_addUser')
     def manage_addUser(self, REQUEST=None, kwargs={}):

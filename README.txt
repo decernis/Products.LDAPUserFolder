@@ -8,6 +8,8 @@ This product is a replacement for a Zope user folder. It does not store its
 own user objects but builds them on the fly after authenticating a user against 
 the LDAP database.
 
+Modified to support storing description and title group attributes at LDAP.
+The group objects are extended by 'extensibleObject' class to achieve this.
 
 Bug tracker
 ===========
