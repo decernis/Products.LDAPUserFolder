@@ -159,6 +159,9 @@ class LDAPUserFolder(BasicUserFolder):
         negative_timeout = self.getCacheTimeout('negative')
         self._cache('negative').setTimeout(negative_timeout)
 
+        # support for legacy objects missing _newgroup_type attribute
+        if not hasattr(self, '_newgroup_type'):
+            self._newgroup_type = 'groupOfNames'
 
     def __init__(self, delegate_type='LDAP delegate'):
         """ Create a new LDAPUserFolder instance """
@@ -208,6 +211,7 @@ class LDAPUserFolder(BasicUserFolder):
         self._pwd_encryption = 'SHA'
         self.read_only = False
         self._extra_user_filter = ''
+        self._newgroup_type = 'groupOfNames'
 
     security.declarePrivate('_clearCaches')
     def _clearCaches(self):
@@ -390,6 +394,7 @@ class LDAPUserFolder(BasicUserFolder):
                    , users_scope, roles,  groups_base, groups_scope
                    , binduid, bindpwd, binduid_usage=1, rdn_attr='cn'
                    , obj_classes='top,person', local_groups=0
+                   , newgroup_type='groupOfNames'
                    , implicit_mapping=0, encryption='SHA', read_only=0
                    , extra_user_filter='', REQUEST=None
                    ):
@@ -434,6 +439,8 @@ class LDAPUserFolder(BasicUserFolder):
         if isinstance(obj_classes, basestring):
             obj_classes = [x.strip() for x in obj_classes.split(',')]
         self._user_objclasses = obj_classes
+
+        self._newgroup_type = newgroup_type.strip()
 
         my_attrs = self.getSchemaConfig().keys()
 
@@ -1384,6 +1391,14 @@ class LDAPUserFolder(BasicUserFolder):
         return tuple(schema)
 
 
+    security.declareProtected(manage_users, 'get_group_class_choices')
+    def get_group_class_choices(self):
+        """
+        Return the possible new Group object classes
+        """
+        return list(sorted(GROUP_MEMBER_MAP.keys()))
+
+
     security.declareProtected(manage_users, 'getSchemaDict')
     def getSchemaDict(self):
         """ Retrieve schema as list of dictionaries """
@@ -1461,10 +1476,13 @@ class LDAPUserFolder(BasicUserFolder):
     security.declareProtected(manage_users, 'manage_addGroup')
     def manage_addGroup( self
                        , newgroup_name
-                       , newgroup_type='groupOfUniqueNames'
+                       , newgroup_type=None
                        , REQUEST=None
                        ):
         """ Add a new group in groups_base """
+        if newgroup_type is None:
+            newgroup_type = self._newgroup_type
+
         if self._local_groups and newgroup_name:
             add_groups = self._additional_groups
 

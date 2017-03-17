@@ -237,6 +237,23 @@
 
     <tr>
       <td align="left" valign="top" class="form-label">
+        Default Group object class
+      </td>
+      <td align="left" valign="top" colspan="3">
+        <select name="newgroup_type">
+          <dtml-let enc="getProperty( '_newgroup_type' )">
+            <dtml-in get_group_class_choices>
+              <option <dtml-var expr="enc == _['sequence-item'] and 'selected' or ''">>
+                &dtml-sequence-item;
+              </option>
+            </dtml-in>
+          </dtml-let>
+        </select>
+      </td>
+    </tr>
+
+    <tr>
+      <td align="left" valign="top" class="form-label">
         Additional user search filter
       </td>
       <td align="left" valign="top">
